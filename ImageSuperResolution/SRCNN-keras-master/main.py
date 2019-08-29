@@ -6,6 +6,7 @@ from keras.optimizers import SGD, Adam
 import prepare_data as pd
 import numpy
 import math
+import cv2
 
 
 def psnr(target, ref):
@@ -63,17 +64,17 @@ def train():
 
     srcnn_model.fit(data, label, batch_size=16, validation_data=(val_data, val_label),
                     callbacks=callbacks_list, shuffle=True, nb_epoch=100, verbose=1)
-    # srcnn_model.load_weights("m_model_adam.h5")
+    # srcnn_model.load_weights("initializer_adam.h5")
 
 
 def predict():
     srcnn_model = predict_model()
-    srcnn_model.load_weights("3051crop_weight_200.h5")
+    #srcnn_model.load_weights("3051crop_weight_200.h5")
+    srcnn_model.load_weights("SRCNN_check.h5")
     IMG_NAME = "Set14/comic.png"
     INPUT_NAME = "input.jpg"
     OUTPUT_NAME = "output.jpg"
 
-    import cv2
     img = cv2.imread(IMG_NAME, cv2.IMREAD_COLOR)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
     shape = img.shape
@@ -107,7 +108,25 @@ def predict():
     print(  "SRCNN:")
     print(  cv2.PSNR(im1, im3))
 
+def predict_only():
+    srcnn_model = predict_model()
+    srcnn_model.load_weights("SRCNN_check.h5")
+    IMG_NAME = "val-images/val-images_x2/val_x2 (1).png"
+    OUTPUT_NAME = "predict.jpg"
+    img = cv2.imread(IMG_NAME, cv2.IMREAD_COLOR)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    Z = numpy.zeros((1, img.shape[0], img.shape[1], 1), dtype=float)
+    Z[0, :, :, 0] = img[:, :, 0] / 255.
+    pre = srcnn_model.predict(Z, batch_size=1) * 255.
+    pre[pre[:] > 255] = 255
+    pre[pre[:] < 0] = 0
+    pre = pre.astype(numpy.uint8)
+    img = cv2.cvtColor(img, cv2.COLOR_BGR2YCrCb)
+    img[6: -6, 6: -6, 0] = pre[0, :, :, 0]
+    img = cv2.cvtColor(img, cv2.COLOR_YCrCb2BGR)
+    cv2.imwrite(OUTPUT_NAME, img)
+
 
 if __name__ == "__main__":
-    train()
-    predict()
+    #train()
+    predict_only()
